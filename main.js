@@ -23,7 +23,7 @@ Apify.main(async () => {
         const term = encodeURIComponent(input.search.trim());
         const loc = encodeURIComponent(input.location.trim());
         await requestQueue.addRequest({
-            url: `https://www.goudengids.nl/`,
+            url: `https://www.goudengids.nl/nl/zoeken/nl/`,
         });
     }
 
