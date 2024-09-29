@@ -57,5 +57,19 @@ Apify.main(async () => {
             log.info(`Scraped ${results.length} results from ${request.url}`);
 
             const nextUrl = $('.pagination-next a').attr('href');
-            if
+            if (nextUrl) {
+                await requestQueue.addRequest({
+                    url: `https://www.goudengids.nl${nextUrl}`,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                        'Referer': 'https://www.google.com',
+                    },
+                });
+            } else {
+                log.info('No next page found');
+            }
+        },
+    });
 
+    await crawler.run();
+});
