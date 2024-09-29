@@ -22,70 +22,42 @@ Apify.main(async () => {
         requestQueue,
         proxyConfiguration,
         handlePageFunction: async ({ request, $ }) => {
-            log.info(`Processing page: ${request.url}`);
             const results = [];
-            
-            // Refining selectors for business elements
-            const resultElems = $('.profile__main'); // Based on your previous image
-            
-            if (resultElems.length === 0) {
-                log.warning('No results found on this page.');
-            }
+
+            // Iterate over each business listing on the page
+            const resultElems = $('.profile-actions'); // Update this selector based on your webpage structure
 
             for (const r of resultElems.toArray()) {
                 const jThis = $(r);
 
-                // Business Name
-                const businessName = jThis.find('h1').text().trim();
-                
-                // Address
-                const address = $('span:contains("straat")').text().trim(); // Adjust if needed
+                // Extract business name
+                const businessName = jThis.find('.profile-actions__item').text().trim();
 
-                // Category
-                const category = $('span.category-selector').text().trim(); // Adjust if needed
-
-                // Website
+                // Extract website
                 const website = jThis.find('.profile-actions__item[data-js-event="link"]').attr('data-js-value');
                 
-                // Phone
+                // Extract phone number
                 const phone = jThis.find('.profile-actions__item[data-js-event="call"]').attr('data-js-value');
                 
-                // E-mail
-                const email = jThis.find('.profile-actions__item[data-js-event="email"]').attr('data-js-value');
+                // Extract address
+                const address = jThis.find('.flex.flex-wrap.lg\\:flex-nowrap .profile__info').text().trim();
 
                 const result = {
-                    businessName: businessName || 'No name found',
-                    address: address || 'No address found',
-                    category: category || 'No category found',
-                    website: website || 'No website found',
-                    phone: phone || 'No phone found',
-                    email: email || 'No email found',
+                    businessName: businessName || undefined,
+                    phone: phone || undefined,
+                    website: website || undefined,
+                    address: address || undefined,
                 };
 
-                log.info(`Scraped result: ${JSON.stringify(result)}`);
                 results.push(result);
             }
 
-            // Store results
-            if (results.length > 0) {
-                await dataset.pushData(results);
-            }
+            // Store results in dataset
+            await dataset.pushData(results);
 
-            const nextUrl = $('.pagination-next a').attr('href');
-            if (nextUrl) {
-                await requestQueue.addRequest({
-                    url: `https://www.goudengids.nl${nextUrl}`,
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-                        'Referer': 'https://www.google.com',
-                    },
-                });
-            } else {
-                log.info('No next page found');
-            }
+            log.info(`Scraped ${results.length} results.`);
         },
     });
 
     await crawler.run();
 });
-
