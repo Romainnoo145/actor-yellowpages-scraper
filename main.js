@@ -23,14 +23,14 @@ Apify.main(async () => {
         proxyConfiguration,
         handlePageFunction: async ({ request, $ }) => {
             const results = [];
-            const resultElems = $('.profile-actions'); // Replace with your relevant selector for the business container
+            const resultElems = $('.profile-actions'); // Adjusted for business container
 
             for (const r of resultElems.toArray()) {
                 const jThis = $(r);
                 
                 // Business Name
-                const businessName = jThis.find('.profile-actions__item').text().trim();
-
+                const businessName = jThis.find('.business-name-selector').text().trim(); // Adjust this selector to match the actual class
+                
                 // Website
                 const website = jThis.find('.profile-actions__item[data-js-event="link"]').attr('data-js-value');
                 
@@ -39,12 +39,20 @@ Apify.main(async () => {
                 
                 // E-mail
                 const email = jThis.find('.profile-actions__item[data-js-event="email"]').attr('data-js-value');
+                
+                // Address
+                const address = jThis.find('.address-selector').text().trim(); // Adjust selector for address
+                
+                // Categories
+                const categories = jThis.find('.category-selector').text().trim(); // Adjust selector for categories
 
                 const result = {
                     businessName: businessName || undefined,
                     website: website || undefined,
                     phone: phone || undefined,
                     email: email || undefined,
+                    address: address || undefined,
+                    categories: categories || undefined,
                 };
 
                 results.push(result);
