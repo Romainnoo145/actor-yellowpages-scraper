@@ -23,7 +23,7 @@ Apify.main(async () => {
         const term = encodeURIComponent(input.search.trim());
         const loc = encodeURIComponent(input.location.trim());
         await requestQueue.addRequest({
-            url: `https://www.yellowpages.com/search?search_terms=${term}&geo_location_terms=${loc}`,
+            url: `https://www.goudengids.nl/`,
         });
     }
 
