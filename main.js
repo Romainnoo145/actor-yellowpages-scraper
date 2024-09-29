@@ -23,31 +23,40 @@ Apify.main(async () => {
         proxyConfiguration,
         handlePageFunction: async ({ request, $ }) => {
             const results = [];
+            const resultElems = $('.profile__main'); // Adjusted based on the structure
 
-            // Business Name
-            const businessName = $('div.profile__info h1').text().trim();
-            
-            // Address
-            const address = $('div.profile__info span').text().trim(); 
-            
-            // Category (adjust selector if necessary)
-            const category = $('div.profile__info span.category-selector').text().trim(); 
-            
-            // Website
-            const website = $('div.profile-actions__item[data-js-event="link"]').attr('data-js-value');
-            
-            // Phone
-            const phone = $('div.profile-actions__item[data-js-event="call"]').attr('data-js-value');
+            for (const r of resultElems.toArray()) {
+                const jThis = $(r);
 
-            const result = {
-                businessName: businessName || undefined,
-                address: address || undefined,
-                category: category || undefined,
-                website: website || undefined,
-                phone: phone || undefined,
-            };
+                // Business Name
+                const businessName = jThis.find('h1').text().trim();
+                
+                // Address
+                const address = $('span:contains("straat")').text().trim();
 
-            results.push(result);
+                // Category
+                const category = $('span.category-selector').text().trim();
+
+                // Website
+                const website = jThis.find('.profile-actions__item[data-js-event="link"]').attr('data-js-value');
+                
+                // Phone
+                const phone = jThis.find('.profile-actions__item[data-js-event="call"]').attr('data-js-value');
+                
+                // E-mail
+                const email = jThis.find('.profile-actions__item[data-js-event="email"]').attr('data-js-value');
+
+                const result = {
+                    businessName: businessName || undefined,
+                    address: address || undefined,
+                    category: category || undefined,
+                    website: website || undefined,
+                    phone: phone || undefined,
+                    email: email || undefined,
+                };
+
+                results.push(result);
+            }
 
             // Store results
             await dataset.pushData(results);
