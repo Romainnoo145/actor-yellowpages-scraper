@@ -3,12 +3,16 @@ const { log } = Apify.utils;
 
 Apify.main(async () => {
     const input = await Apify.getInput();
+    const { search, location } = input;
+
     const dataset = await Apify.openDataset();
     const requestQueue = await Apify.openRequestQueue();
 
-    // Add the target URL
+    // Dynamically build the URL based on search term and location
+    const searchUrl = `https://www.goudengids.nl/nl/zoeken/${encodeURIComponent(search)}/${encodeURIComponent(location)}/`;
+
     await requestQueue.addRequest({
-        url: 'https://www.goudengids.nl/nl/zoeken/Aannemer/Venlo/',
+        url: searchUrl,
         headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
             'Referer': 'https://www.google.com',
@@ -68,4 +72,3 @@ Apify.main(async () => {
     });
     await crawler.run();
 });
-
