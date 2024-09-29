@@ -7,44 +7,14 @@ Apify.main(async () => {
     const dataset = await Apify.openDataset();
     const requestQueue = await Apify.openRequestQueue();
 
-    // Check input
-    const sOk = input.search && input.search.trim().length > 0;
-    const lOk = input.location && input.location.trim().length > 0;
-
-    if ((!sOk || !lOk) && !input.startUrls) {
-        throw new Error(
-            'Either "search" and "location" attributes or "startUrls" attribute has to be set!',
-        );
-    }
-
     // Add URLs to requestQueue
-    if (input.search && input.location) {
-        const term = encodeURIComponent(input.search.trim());
-        const loc = encodeURIComponent(input.location.trim());
-        await requestQueue.addRequest({
-            url: `https://www.goudengids.nl/nl/zoeken/nl/`,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-                'Referer': 'https://www.google.com',
-            },
-        });
-    }
-
-    if (input.startUrls) {
-        for (const sUrl of input.startUrls) {
-            const request = typeof sUrl === 'string' ? { url: sUrl } : sUrl;
-            if (!request.url || typeof request.url !== 'string') {
-                throw new Error(`Invalid startUrl: ${JSON.stringify(sUrl)}`);
-            }
-            await requestQueue.addRequest({
-                url: request.url,
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-                    'Referer': 'https://www.google.com',
-                },
-            });
-        }
-    }
+    await requestQueue.addRequest({
+        url: `https://www.goudengids.nl/nl/zoeken/Aannemer/Venlo/`,
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+            'Referer': 'https://www.google.com',
+        },
+    });
 
     // Proxy Configuration
     const proxyConfiguration = await Apify.createProxyConfiguration({
@@ -63,7 +33,7 @@ Apify.main(async () => {
 
             // Process result list
             const results = [];
-            const resultElems = $('.search-results .result');
+            const resultElems = $('.yp-Result');
 
             for (const r of resultElems.toArray()) {
                 const jThis = $(r);
@@ -71,42 +41,28 @@ Apify.main(async () => {
                     const text = jThis.find(selector).text().trim();
                     return text.length > 0 ? text : undefined;
                 };
-                const businessSlug = jThis.find('a.business-name').attr('href');
-                const address = getText('.adr')
+                const businessSlug = jThis.find('a').attr('href');
+                const address = getText('.yp-Address')
                     || jThis
-                        .find('.adr')
+                        .find('.yp-Address')
                         .nextUntil('p')
                         .toArray()
                         .map((l) => $(l).text().trim())
                         .join(', ');
                 const categories = jThis
-                    .find('.categories a')
+                    .find('.yp-Categories a')
                     .toArray()
                     .map((c) => $(c).text().trim());
-                const rating = jThis.find('.result-rating').attr('class');
-                const rCount = getText('.result-rating .count');
                 const website = jThis
-                    .find('a.track-visit-website')
+                    .find('a.yp-Website')
                     .attr('href');
-                const reviewSnippet = getText('.snippet');
-                const isInfoSnippet = reviewSnippet && reviewSnippet.includes('From Business');
-                const image = jThis.find('a.photo img').attr('src');
+                const phone = getText('.yp-Phone');
                 const result = {
-                    isAd: getText('.ad-pill') === 'Ad' || undefined,
                     url: businessSlug ? `https://www.goudengids.nl${businessSlug}` : undefined,
-                    name: getText('.info .n a'),
-                    address: address.length > 0 ? address : undefined,
-                    phone: getText('.info .phone'),
+                    name: getText('.yp-Name'),
+                    address,
+                    phone,
                     website,
-                    rating: rating ? parseRating(rating) : undefined,
-                    ratingCount: rCount
-                        ? parseFloat(rCount.match(/\d+/)[0])
-                        : undefined,
-                    reviewSnippet: isInfoSnippet ? undefined : reviewSnippet,
-                    infoSnippet: isInfoSnippet
-                        ? reviewSnippet.slice(15)
-                        : undefined,
-                    image: image ? image.split('_')[0] : undefined,
                     categories: categories.length > 0 ? categories : undefined,
                 };
 
@@ -116,7 +72,7 @@ Apify.main(async () => {
             // Store results and enqueue next page
             await dataset.pushData(results);
 
-            const nextUrl = $('.pagination .next').attr('href');
+            const nextUrl = $('.pagination-next a').attr('href');
 
             if (nextUrl) {
                 const nextPageReq = await requestQueue.addRequest({
@@ -137,14 +93,3 @@ Apify.main(async () => {
     });
     await crawler.run();
 });
-
-function parseRating(aClass) {
-    const nums = ['one', 'two', 'three', 'four', 'five'];
-    for (let i = 0; i < nums.length; i++) {
-        if (aClass.includes(nums[i])) {
-            return aClass.includes('half') ? i + 1.5 : i + 1;
-        }
-    }
-    return undefined;
-}
-
