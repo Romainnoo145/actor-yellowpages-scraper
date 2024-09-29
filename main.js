@@ -2,11 +2,9 @@ const Apify = require('apify');
 const { log } = Apify.utils;
 
 Apify.main(async () => {
-    const input = await Apify.getInput();
-    const dataset = await Apify.openDataset();
     const requestQueue = await Apify.openRequestQueue();
-
-    // Add the main URL to the requestQueue
+    
+    // Add the starting URL
     await requestQueue.addRequest({
         url: `https://www.goudengids.nl/nl/zoeken/Aannemer/Venlo/`,
         headers: {
@@ -22,40 +20,36 @@ Apify.main(async () => {
     const crawler = new Apify.CheerioCrawler({
         requestQueue,
         proxyConfiguration,
-        handlePageFunction: async ({ request, $ }) => {
+        handlePageFunction: async ({ $, request }) => {
             const results = [];
-            const resultElems = $('.result-item__content'); // Adjusted to capture the listing container
 
-            for (const r of resultElems.toArray()) {
-                const jThis = $(r);
-                
-                // Extract business name
-                const businessName = jThis.find('.result-item__name').text().trim();
-                
-                // Extract address
-                const address = jThis.find('.result-item__address').text().trim();
-                
-                // Extract phone
-                const phone = jThis.find('.profile-actions__item[data-js-event="call"]').attr('data-js-value');
-                
-                // Extract website
-                const website = jThis.find('.profile-actions__item[data-js-event="link"]').attr('data-js-value');
+            // Targeting each business listing
+            $('.result-item__content').each((index, el) => {
+                const name = $(el).find('.result-item__info a').text().trim();
+                const address = $(el).find('.result-item__info p').text().trim();
+                const phone = $(el).find('.profile-actions__item[data-js-event="call"]').attr('data-js-value');
+                const website = $(el).find('.profile-actions__item[data-js-event="link"]').attr('data-js-value');
 
-                const result = {
-                    name: businessName || undefined,
-                    address: address || undefined,
-                    phone: phone || undefined,
-                    website: website || undefined,
-                };
+                if (name || address || phone || website) {
+                    results.push({
+                        name: name || 'N/A',
+                        address: address || 'N/A',
+                        phone: phone || 'N/A',
+                        website: website || 'N/A',
+                    });
+                }
+            });
 
-                results.push(result);
+            // Log and push results to dataset
+            if (results.length > 0) {
+                log.info(`Scraped ${results.length} businesses.`);
+                await Apify.pushData(results);
+            } else {
+                log.warn('No businesses found on this page.');
             }
-
-            // Store results
-            await dataset.pushData(results);
-
-            log.info(`Scraped ${results.length} results.`);
         },
     });
+
     await crawler.run();
 });
+
