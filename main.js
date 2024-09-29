@@ -33,16 +33,16 @@ Apify.main(async () => {
                 const element = $(el);
 
                 // Scraping business name
-                const name = element.find('.relative.pr-18').text().trim() || 'N/A';
+                const name = element.find('.relative.pr-18').text().trim() || '';
 
                 // Scraping address
-                const address = element.find('li[itemprop="address"]').text().trim() || 'N/A';
+                const address = element.find('li[itemprop="address"]').text().trim() || '';
 
                 // Scraping phone number
-                const phone = element.find('.profile-actions__item[data-js-event="call"]').attr('data-js-value') || 'N/A';
+                const phone = element.find('.profile-actions__item[data-js-event="call"]').attr('data-js-value') || '';
 
                 // Scraping website
-                const website = element.find('.profile-actions__item[data-js-event="link"]').attr('data-js-value') || 'N/A';
+                const website = element.find('.profile-actions__item[data-js-event="link"]').attr('data-js-value') || '';
 
                 const result = {
                     name,
