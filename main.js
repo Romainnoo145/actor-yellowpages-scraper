@@ -6,9 +6,9 @@ Apify.main(async () => {
     const dataset = await Apify.openDataset();
     const requestQueue = await Apify.openRequestQueue();
 
-    // Start with the main URL for the search
+    // Add the target URL
     await requestQueue.addRequest({
-        url: `https://www.goudengids.nl/nl/zoeken/Aannemer/Venlo/`,
+        url: 'https://www.goudengids.nl/nl/zoeken/Aannemer/Venlo/',
         headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
             'Referer': 'https://www.google.com',
@@ -24,38 +24,32 @@ Apify.main(async () => {
         proxyConfiguration,
         handlePageFunction: async ({ request, $ }) => {
             const results = [];
-            const resultElems = $('.result-item__content'); // Adjusted to target result block
 
-            for (const r of resultElems.toArray()) {
-                const jThis = $(r);
+            $('.result-item__content').each((index, el) => {
+                const element = $(el);
 
-                // Business Name
-                const businessName = jThis.find('.relative.pr-18').text().trim();
+                // Scraping business name
+                const name = element.find('.relative.pr-18').text().trim() || 'N/A';
 
-                // Category
-                const category = jThis.find('.mb-2.5.flex.items-start.gap-4').text().trim();
+                // Scraping address
+                const address = element.find('li[itemprop="address"]').text().trim() || 'N/A';
 
-                // Address
-                const address = jThis.find('li[itemprop="address"]').text().trim();
+                // Scraping phone number
+                const phone = element.find('.profile-actions__item[data-js-event="call"]').attr('data-js-value') || 'N/A';
 
-                // Website
-                const website = jThis.find('a[data-js-event="link"]').attr('data-js-value');
-
-                // Phone
-                const phone = jThis.find('a[data-js-event="call"]').attr('data-js-value');
+                // Scraping website
+                const website = element.find('.profile-actions__item[data-js-event="link"]').attr('data-js-value') || 'N/A';
 
                 const result = {
-                    name: businessName || 'N/A',
-                    address: address || 'N/A',
-                    phone: phone || 'N/A',
-                    website: website || 'N/A',
-                    category: category || 'N/A'
+                    name,
+                    address,
+                    phone,
+                    website,
                 };
 
                 results.push(result);
-            }
+            });
 
-            // Store results
             await dataset.pushData(results);
 
             const nextUrl = $('.pagination-next a').attr('href');
