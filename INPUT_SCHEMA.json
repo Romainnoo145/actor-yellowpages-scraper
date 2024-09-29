@@ -7,14 +7,14 @@
             "title": "Search",
             "type": "string",
             "editor": "textfield",
-            "prefill": "Dentist",
+            "prefill": "Aannemer",
             "description": "Query to search on Yellow Pages"
         },
         "location": {
             "title": "Location",
             "type": "string",
             "editor": "textfield",
-            "prefill": "Los Angeles",
+            "prefill": "Venlo",
             "description": "Location to search entries in"
         },
         "startUrls": {
