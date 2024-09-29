@@ -1,5 +1,4 @@
 const Apify = require('apify');
-
 const { log } = Apify.utils;
 
 Apify.main(async () => {
@@ -24,6 +23,10 @@ Apify.main(async () => {
         const loc = encodeURIComponent(input.location.trim());
         await requestQueue.addRequest({
             url: `https://www.goudengids.nl/nl/zoeken/nl/`,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                'Referer': 'https://www.google.com',
+            },
         });
     }
 
@@ -33,51 +36,30 @@ Apify.main(async () => {
             if (!request.url || typeof request.url !== 'string') {
                 throw new Error(`Invalid startUrl: ${JSON.stringify(sUrl)}`);
             }
-            await requestQueue.addRequest(request);
+            await requestQueue.addRequest({
+                url: request.url,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                    'Referer': 'https://www.google.com',
+                },
+            });
         }
     }
 
-    // Parse extendOutputFunction
-    let extendOutputFunction = null;
-
-    if (input.extendOutputFunction) {
-        try {
-            extendOutputFunction = eval(input.extendOutputFunction);
-        } catch (e) {
-            throw new Error(
-                `extendOutputFunction is not a valid JavaScript! Error: ${e}`,
-            );
-        }
-
-        if (typeof extendOutputFunction !== 'function') {
-            throw new Error(
-                `extendOutputFunction is not a function! Please fix it or use just default output!`,
-            );
-        }
-    }
-
-    // Parse rating value from element class
-    const nums = ['one', 'two', 'three', 'four', 'five'];
-    const parseRating = (aClass) => {
-        for (let i = 0; i < nums.length; i++) {
-            if (aClass.includes(nums[i])) {
-                return aClass.includes('half') ? i + 1.5 : i + 1;
-            }
-        }
-        return undefined;
-    };
-
-    const proxyConfiguration = await Apify.createProxyConfiguration(input.proxyConfiguration);
+    // Proxy Configuration
+    const proxyConfiguration = await Apify.createProxyConfiguration({
+        useApifyProxy: true,
+    });
 
     // Create and run crawler
     const crawler = new Apify.CheerioCrawler({
         requestQueue,
         proxyConfiguration,
-        handlePageFunction: async ({
-            request,
-            $,
-        }) => {
+        handlePageFunction: async ({ request, $ }) => {
             const { url } = request;
+
+            // Random delay to avoid detection
+            await Apify.utils.sleep(Math.random() * 3000 + 1000);
 
             // Process result list
             const results = [];
@@ -111,7 +93,7 @@ Apify.main(async () => {
                 const image = jThis.find('a.photo img').attr('src');
                 const result = {
                     isAd: getText('.ad-pill') === 'Ad' || undefined,
-                    url: businessSlug ? `https://www.yellowpages.com${businessSlug}` : undefined,
+                    url: businessSlug ? `https://www.goudengids.nl${businessSlug}` : undefined,
                     name: getText('.info .n a'),
                     address: address.length > 0 ? address : undefined,
                     phone: getText('.info .phone'),
@@ -128,33 +110,8 @@ Apify.main(async () => {
                     categories: categories.length > 0 ? categories : undefined,
                 };
 
-                if (extendOutputFunction) {
-                    try {
-                        Object.assign(
-                            result,
-                            await extendOutputFunction($, jThis),
-                        );
-                    } catch (e) {
-                        log.exception(e, 'extendOutputFunction error:');
-                    }
-                }
-
                 results.push(result);
             }
-
-            // Check maximum result count
-            if (input.maxItems) {
-                const count = (await dataset.getInfo()).cleanItemCount;
-                if (count + results.length >= input.maxItems) {
-                    const allowed = input.maxItems - count;
-                    if (allowed > 0) {
-                        await dataset.pushData(results.slice(0, allowed));
-                    }
-                    return process.exit(0);
-                }
-            }
-
-            log.info(`Found ${results.length} results.`, { url });
 
             // Store results and enqueue next page
             await dataset.pushData(results);
@@ -163,7 +120,11 @@ Apify.main(async () => {
 
             if (nextUrl) {
                 const nextPageReq = await requestQueue.addRequest({
-                    url: `http://www.yellowpages.com${nextUrl}`,
+                    url: `https://www.goudengids.nl${nextUrl}`,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                        'Referer': 'https://www.google.com',
+                    },
                 });
 
                 if (!nextPageReq.wasAlreadyPresent) {
@@ -176,3 +137,14 @@ Apify.main(async () => {
     });
     await crawler.run();
 });
+
+function parseRating(aClass) {
+    const nums = ['one', 'two', 'three', 'four', 'five'];
+    for (let i = 0; i < nums.length; i++) {
+        if (aClass.includes(nums[i])) {
+            return aClass.includes('half') ? i + 1.5 : i + 1;
+        }
+    }
+    return undefined;
+}
+
