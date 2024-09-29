@@ -23,40 +23,31 @@ Apify.main(async () => {
         proxyConfiguration,
         handlePageFunction: async ({ request, $ }) => {
             const results = [];
-            const resultElems = $('.profile-actions'); // Adjusted for business container
 
-            for (const r of resultElems.toArray()) {
-                const jThis = $(r);
-                
-                // Business Name
-                const businessName = jThis.find('.business-name-selector').text().trim(); // Adjust this selector to match the actual class
-                
-                // Website
-                const website = jThis.find('.profile-actions__item[data-js-event="link"]').attr('data-js-value');
-                
-                // Phone
-                const phone = jThis.find('.profile-actions__item[data-js-event="call"]').attr('data-js-value');
-                
-                // E-mail
-                const email = jThis.find('.profile-actions__item[data-js-event="email"]').attr('data-js-value');
-                
-                // Address
-                const address = jThis.find('.address-selector').text().trim(); // Adjust selector for address
-                
-                // Categories
-                const categories = jThis.find('.category-selector').text().trim(); // Adjust selector for categories
+            // Business Name
+            const businessName = $('div.profile__info h1').text().trim();
+            
+            // Address
+            const address = $('div.profile__info span').text().trim(); 
+            
+            // Category (adjust selector if necessary)
+            const category = $('div.profile__info span.category-selector').text().trim(); 
+            
+            // Website
+            const website = $('div.profile-actions__item[data-js-event="link"]').attr('data-js-value');
+            
+            // Phone
+            const phone = $('div.profile-actions__item[data-js-event="call"]').attr('data-js-value');
 
-                const result = {
-                    businessName: businessName || undefined,
-                    website: website || undefined,
-                    phone: phone || undefined,
-                    email: email || undefined,
-                    address: address || undefined,
-                    categories: categories || undefined,
-                };
+            const result = {
+                businessName: businessName || undefined,
+                address: address || undefined,
+                category: category || undefined,
+                website: website || undefined,
+                phone: phone || undefined,
+            };
 
-                results.push(result);
-            }
+            results.push(result);
 
             // Store results
             await dataset.pushData(results);
