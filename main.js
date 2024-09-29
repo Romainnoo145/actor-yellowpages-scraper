@@ -6,6 +6,7 @@ Apify.main(async () => {
     const dataset = await Apify.openDataset();
     const requestQueue = await Apify.openRequestQueue();
 
+    // Start with the main URL for the search
     await requestQueue.addRequest({
         url: `https://www.goudengids.nl/nl/zoeken/Aannemer/Venlo/`,
         headers: {
@@ -23,7 +24,7 @@ Apify.main(async () => {
         proxyConfiguration,
         handlePageFunction: async ({ request, $ }) => {
             const results = [];
-            const resultElems = $('.result-item__content'); // Updated selector for each result item
+            const resultElems = $('.result-item__content'); // Adjusted to target result block
 
             for (const r of resultElems.toArray()) {
                 const jThis = $(r);
@@ -31,24 +32,24 @@ Apify.main(async () => {
                 // Business Name
                 const businessName = jThis.find('.relative.pr-18').text().trim();
 
-                // Address
-                const address = jThis.find('.text-gray-400').text().trim();
-
                 // Category
-                const category = jThis.find('.flex.items-start.gap-4').text().trim();
+                const category = jThis.find('.mb-2.5.flex.items-start.gap-4').text().trim();
+
+                // Address
+                const address = jThis.find('li[itemprop="address"]').text().trim();
 
                 // Website
-                const website = jThis.find('.profile-actions__item[data-js-event="link"]').attr('data-js-value');
+                const website = jThis.find('a[data-js-event="link"]').attr('data-js-value');
 
                 // Phone
-                const phone = jThis.find('.profile-actions__item[data-js-event="call"]').attr('data-js-value');
+                const phone = jThis.find('a[data-js-event="call"]').attr('data-js-value');
 
                 const result = {
                     name: businessName || 'N/A',
                     address: address || 'N/A',
-                    category: category || 'N/A',
                     phone: phone || 'N/A',
                     website: website || 'N/A',
+                    category: category || 'N/A'
                 };
 
                 results.push(result);
@@ -57,8 +58,20 @@ Apify.main(async () => {
             // Store results
             await dataset.pushData(results);
 
-            log.info(`Scraped ${results.length} results from ${request.url}`);
+            const nextUrl = $('.pagination-next a').attr('href');
+            if (nextUrl) {
+                await requestQueue.addRequest({
+                    url: `https://www.goudengids.nl${nextUrl}`,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                        'Referer': 'https://www.google.com',
+                    },
+                });
+            } else {
+                log.info('No next page found');
+            }
         },
     });
     await crawler.run();
 });
+
